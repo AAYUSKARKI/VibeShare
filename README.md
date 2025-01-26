@@ -58,7 +58,7 @@
 ### Installation
 1. **Clone the Repository**:
    ```bash
-   git clone [https://github.com/your-repo/vibeshare.git](https://github.com/AAYUSKARKI/VibeShare.git)
+   git clone https://github.com/AAYUSKARKI/VibeShare.git
    cd vibeshare
    ```
 
