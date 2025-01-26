@@ -22,7 +22,7 @@ const initialPosts: Post[] = [
     id: "1",
     author: "Alice",
     content: "Just had an amazing day at the beach! 🏖️ #SummerVibes",
-    imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSLFAjdtgTjUI0K4WcYKr0ZTW4lbEInVANkOQ&s",
+    imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS45XRGoOgqDujrdcAQAME0LjyIg0YnR8Jk-A&s",
     sentiment: { positive: 0.8, negative: 0.1, neutral: 0.1 },
     likes: 42,
     dislikes: 2,
