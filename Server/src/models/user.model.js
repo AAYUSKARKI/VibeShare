@@ -21,7 +21,6 @@ const userschema = new Schema(
         },
         avatar: {
             type: String, 
-            required: true,
         },
         password: {
             type: String,
@@ -29,17 +28,8 @@ const userschema = new Schema(
         refreshtoken: {
             type: String
         },
-        role: {
-            type: String,
-            enum: ["seller", "buyer"],
-            default: "buyer"
-        },
         verifyToken: {
             type: String
-        },
-        sellerCategory: {
-            type: Array,
-            default:[]
         },
         isVerified: {
             type: Boolean,

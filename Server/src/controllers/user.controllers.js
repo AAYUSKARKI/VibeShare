@@ -36,15 +36,10 @@ const registerUser = asynchandler(async (req, res) => {
     //remove password and refresh tokenfield from response
     //check for user creation 
     //return res
-    const { email, username, password,avatar,role} = req.body
-    let {sellerCategory} = req.body
+    const { email, username, password} = req.body
 
-    if ([ email,username,password,avatar,role].some((field) => field?.trim() === "")) {
+    if ([ email,username,password].some((field) => field?.trim() === "")) {
         throw new Apierror(400, "All fields are required")
-    }
-
-    if(role==="seller" && !sellerCategory){
-        throw new Apierror(400, "seller category is required")
     }
 
     const existeduser = await User.findOne({
@@ -60,27 +55,10 @@ const registerUser = asynchandler(async (req, res) => {
         });
     }
 
-    const avatarlocalpath = req.files?.avatar[0]?.path
-    console.log("Avatar file received:", req.files?.avatar);
-    if (!avatarlocalpath) {
-        throw new Apierror(400, "Avatar file is required")
-    }
-    const uploadavatar = await uploadOnCloudinary(avatarlocalpath)
-    if (!uploadavatar) {
-        throw new Apierror(400, "Avatar file not uploaded")
-    }
-
-    if(role==="seller"){
-        sellerCategory = JSON.parse(sellerCategory)
-    }
-
     const user = await User.create({
-        avatar: uploadavatar.url,
         email,
-        role,
         password,
         username: username.toLowerCase(),
-        sellerCategory,
     })
     const verifyToken = user.generateVerificationToken()
     await user.save({ validateBeforeSave: false })
@@ -91,10 +69,10 @@ const registerUser = asynchandler(async (req, res) => {
         throw new Apierror(500, "something went wrong while registering a user")
     }
 
-    const url = `https://wish-me-liard.vercel.app/verify/?verifyToken=${verifyToken}`
-    const text = `Please click the link below to verify your email: ${url}`
+    // const url = `https://wish-me-liard.vercel.app/verify/?verifyToken=${verifyToken}`
+    // const text = `Please click the link below to verify your email: ${url}`
 
-    await sendEmail(email,"Verify your email",text)
+    // await sendEmail(email,"Verify your email",text)
 
     return res.status(201).json(
         new Apiresponse(200, createdUser, "User Registered sucesfully")
@@ -151,13 +129,13 @@ const loginuser = asynchandler(async (req, res) => {
 
     const verifyToken = user.verifyToken
 
-    if(!user.isVerified){
-        const url = `https://wish-me-liard.vercel.app/verify/?verifyToken=${verifyToken}`
-        const text = `Please click the link below to verify your email: ${url}`
+    // if(!user.isVerified){
+    //     const url = `https://wish-me-liard.vercel.app/verify/?verifyToken=${verifyToken}`
+    //     const text = `Please click the link below to verify your email: ${url}`
 
-        await sendEmail(email,"Verify your email",text)
-        throw new Apierror(404, "user not verified,please verify your email")
-    }
+    //     await sendEmail(email,"Verify your email",text)
+    //     throw new Apierror(404, "user not verified,please verify your email")
+    // }
 
     const isPasswordValid = await user.isPasswordCorrect(password)
 
@@ -170,7 +148,7 @@ const loginuser = asynchandler(async (req, res) => {
 
     const loggedinUser = await User.findById(user._id).select("-password,-refreshtoken")
 
-    await sendEmail(email, "is this you?", `Your account has just logged in!`)
+    // await sendEmail(email, "is this you?", `Your account has just logged in!`)
 
     const options = {
         httpOnly: true,
