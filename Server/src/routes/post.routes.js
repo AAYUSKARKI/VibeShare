@@ -12,19 +12,14 @@ import { verifyJWT } from "../middleware/auth.middleware.js"; // Import the JWT 
 const router = Router();
 
 // Route to create a new post
-router.route("/posts").post(
+router.route("/create").post(
     verifyJWT, // Ensure the user is authenticated
-    upload.fields([
-        {
-            name: "image", // Field name for the post image
-            maxCount: 1
-        }
-    ]),
+    upload.single("imageUrl"),
     createPost
 );
 
 // Route to get all posts
-router.route("/posts").get(getAllPosts);
+router.route("/").get(getAllPosts);
 
 // Route to get a single post by ID
 router.route("/posts/:id").get(getPostById);

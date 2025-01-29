@@ -1,34 +1,88 @@
-import { useState } from "react"
-import { ImageIcon, Tag, X } from "lucide-react"
+import { useState } from "react";
+import { ImageIcon, Tag, X } from "lucide-react";
+import { useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
+import axios from "axios";
+
+interface SentimentResult {
+  label: string;
+  score: number;
+}
 
 export default function CreatePost({ onClose }: { onClose: () => void }) {
-  const [content, setContent] = useState("")
-  const [tags, setTags] = useState<string[]>([])
-  const [currentTag, setCurrentTag] = useState("")
+  const [content, setContent] = useState<string>("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [currentTag, setCurrentTag] = useState<string>("");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { user } = useSelector((state: any) => state.user);
+  const [result, setResult] = useState<SentimentResult | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Handle post submission logic here
-    console.log("Submitting post:", { content, tags })
-    // Reset form and close modal
-    setContent("")
-    setTags([])
-    onClose()
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("content", content);
+    formData.append("tags", JSON.stringify(tags));
+    if (image) {
+      formData.append("imageUrl", image);
+    }
+
+    try {
+      const response = await axios.post<SentimentResult[]>('http://127.0.0.1:5000/classify', { text: content });
+      setResult(response.data[0]);
+      if (response.data) {
+        toast.success("Sentiment analysis successful!");
+        formData.append("label", response.data[0].label);
+        formData.append("score", response.data[0].score.toString());
+      } else {
+        toast.error("Sentiment analysis failed. Please try again.");
+      }
+      const res = await axios.post("http://localhost:7000/api/v1/posts/create", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${user.data.refreshtoken}`,
+        },
+      });
+      if (res.data) {
+        toast.success("Post created successfully!");
+      }
+      resetForm();
+      onClose();
+    } catch (error) {
+      toast.error("Failed to create post. Please try again.");
+    }
+  };
+
+  const resetForm = () => {
+    setContent("");
+    setTags([]);
+    setImage(null);
+    setImagePreview(null);
+    setCurrentTag("");
+  };
 
   const handleAddTag = () => {
-    if (currentTag && !tags.includes(currentTag)) {
-      setTags([...tags, currentTag])
-      setCurrentTag("")
+    const trimmedTag = currentTag.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setCurrentTag("");
     }
-  }
+  };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
-  }
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-lg">
         <h2 className="text-2xl font-bold mb-4">Create a New Post</h2>
         <form onSubmit={handleSubmit}>
@@ -40,14 +94,24 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
             onChange={(e) => setContent(e.target.value)}
             required
           />
+          {imagePreview && (
+            <div className="mb-4">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="w-full h-40 object-cover rounded-lg"
+              />
+            </div>
+          )}
           <div className="flex items-center space-x-4 mb-4">
-            <button
-              type="button"
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition duration-200"
+            <label
+              htmlFor="image"
+              className="cursor-pointer flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition duration-200"
             >
               <ImageIcon size={20} />
               <span>Add Image</span>
-            </button>
+              <input type="file" name="image" onChange={handleImageChange} className="hidden" id="image" />
+            </label>
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -55,7 +119,12 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
                 placeholder="Add a tag"
                 value={currentTag}
                 onChange={(e) => setCurrentTag(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
               />
               <button
                 type="button"
@@ -101,6 +170,5 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
         </form>
       </div>
     </div>
-  )
+  );
 }
-

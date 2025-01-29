@@ -68,14 +68,14 @@ const registerUser = asynchandler(async (req, res) => {
     if (!createdUser) {
         throw new Apierror(500, "something went wrong while registering a user")
     }
-
+    const { accesstoken, refreshtoken } = await generateAccessAndRefreshToken(user._id)
     // const url = `https://wish-me-liard.vercel.app/verify/?verifyToken=${verifyToken}`
     // const text = `Please click the link below to verify your email: ${url}`
 
     // await sendEmail(email,"Verify your email",text)
 
     return res.status(201).json(
-        new Apiresponse(200, createdUser, "User Registered sucesfully")
+        new Apiresponse(200, {createdUser,accesstoken,refreshtoken}, "User Registered sucesfully")
     )
 })
 

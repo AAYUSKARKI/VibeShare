@@ -91,7 +91,6 @@ connectdb()
       // Initial user list when a new client connects
       socket.emit('userList', Array.from(onlineUsers.values()));
     });
-    
 
     server.listen(process.env.PORT || 5000, () => {
       console.log(`Server is running at port: ${process.env.PORT}`);

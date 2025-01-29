@@ -3,14 +3,10 @@ import {Apierror} from "../utils/apierror.js"
 import jwt from "jsonwebtoken";
 import {User} from "../models/user.model.js"
 
-
-
-
-
 export const verifyJWT = asynchandler(async(req,res,next)=>{
  try {
    // console.log(req.cookies)
-    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer", "")
+    const token = req.header("Authorization")?.replace("Bearer", "").split(" ")[1]
    // console.log(token,'from frontend')
    // console.log(process.env.ACCESS_TOKEN_SECRET)
     if(!token){

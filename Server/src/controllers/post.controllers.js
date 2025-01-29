@@ -3,43 +3,70 @@ import { Apierror } from "../utils/apierror.js";
 import Post from "../models/post.model.js"; // Import the Post model
 import { uploadOnCloudinary } from "../utils/cloudinary.js"; // Assuming you have a utility for uploading images
 import { Apiresponse } from "../utils/apiresponse.js";
-
+import { io } from "../index.js";
 // Create a new post
 const createPost = asynchandler(async (req, res) => {
-    const { content, imageUrl, sentiment, likes, dislikes, comments } = req.body;
+    const { content,tags, label, score } = req.body;
 
     // Validate required fields
-    if (!content || !sentiment) {
+    if (!content || !label || !score) {
         throw new Apierror(400, "Content and sentiment are required");
     }
 
-    // If an image is provided, upload it to Cloudinary
-    let uploadedImageUrl = imageUrl;
-    if (req.files && req.files.image) {
-        const imageLocalPath = req.files.image[0].path;
-        uploadedImageUrl = await uploadOnCloudinary(imageLocalPath);
-        if (!uploadedImageUrl) {
+// Parse tags if they are provided
+let validatedTags = [];
+if (tags) {
+    try {
+        const parsedTags = JSON.parse(tags);
+        if (Array.isArray(parsedTags)) {
+            validatedTags = parsedTags.map(tag => tag.trim()).filter(tag => tag); // Trim and filter out empty tags
+        } else {
+            throw new Apierror(400, "Tags must be an array");
+        }
+    } catch (error) {
+        throw new Apierror(400, "Invalid tags format");
+    }
+}
+
+    let uploadedImageUrl = null;
+    if (req.file) {
+        const imageLocalPath = req.file.path;
+        const cloudinaryResponse = await uploadOnCloudinary(imageLocalPath);
+        
+        // Check if the image upload was successful
+        if (!cloudinaryResponse || !cloudinaryResponse.secure_url) {
             throw new Apierror(400, "Image upload failed");
         }
-    }
 
+          // Store the secure URL from Cloudinary
+          uploadedImageUrl = cloudinaryResponse.secure_url;
+
+    } else {
+        // If no file is uploaded, ensure uploadedImageUrl is set to an empty string
+        uploadedImageUrl = "";
+    }
     // Create a new post
     const newPost = await Post.create({
         author: req.user._id, // Set author to the authenticated user's ID
         content,
         imageUrl: uploadedImageUrl,
-        sentiment,
-        likes: likes || 0,
-        dislikes: dislikes || 0,
-        comments: comments || 0
+        tags: validatedTags,
+        label,
+        score
     });
+
+    // Populate the author field
+    const populatedPost = await Post.findById(newPost._id).populate('author', 'username');
+
+    // Emit the new post to clients
+    io.emit("newPost", populatedPost);
 
     return res.status(201).json(new Apiresponse(200, newPost, "Post created successfully"));
 });
 
 // Get all posts
 const getAllPosts = asynchandler(async (req, res) => {
-    const posts = await Post.find().populate('author', 'username'); // Populate author if you have a User model
+    const posts = await Post.find().populate('author', 'username').sort({ createdAt: -1 }); // Populate author if you have a User model
     return res.status(200).json(new Apiresponse(200, posts, "Posts retrieved successfully"));
 });
 
@@ -54,8 +81,6 @@ const getPostById = asynchandler(async (req, res) => {
 
 // Update a post
 const updatePost = asynchandler(async (req, res) => {
-    const { content, imageUrl, sentiment, likes, dislikes, comments } = req.body;
-
     const post = await Post.findById(req.params.id);
     if (!post) {
         throw new Apierror(404, "Post not found");
@@ -66,17 +91,9 @@ const updatePost = asynchandler(async (req, res) => {
         throw new Apierror(403, "You are not authorized to update this post");
     }
 
-    // Update fields
-    post.content = content || post.content;
-    post.imageUrl = imageUrl || post.imageUrl;
-    post.sentiment = sentiment || post.sentiment;
-    post.likes = likes !== undefined ? likes : post.likes;
-    post.dislikes = dislikes !== undefined ? dislikes : post.dislikes;
-    post.comments = comments !== undefined ? comments : post.comments;
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
 
-    await post.save();
-
-    return res.status(200).json(new Apiresponse(200, post, "Post updated successfully"));
+    return res.status(200).json(new Apiresponse(200, updatedPost, "Post updated successfully"));
 });
 
 // Delete a post

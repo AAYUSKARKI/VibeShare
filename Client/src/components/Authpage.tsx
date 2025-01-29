@@ -57,7 +57,9 @@ const AuthPage = () => {
       if (response.data) {
         setIsLoading(false);
         toast.success("Authentication successful!");
-        dispatch(setuser(response.data));
+        if (isLogin) {
+            dispatch(setuser(response.data));
+        }
         navigate("/");
       }
     } catch (error) {

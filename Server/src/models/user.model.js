@@ -31,6 +31,17 @@ const userschema = new Schema(
         verifyToken: {
             type: String
         },
+        walletAddress: {
+            type: String
+        },
+        tokenBalance: {
+            type: Number,
+            default: 0
+        },
+        posts: {
+            type:mongoose.Schema.Types.ObjectId,
+            ref: "Post"
+        },
         isVerified: {
             type: Boolean,
             default: false

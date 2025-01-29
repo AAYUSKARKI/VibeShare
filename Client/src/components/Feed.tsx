@@ -1,52 +1,49 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ThumbsUp, ThumbsDown, MessageCircle, TrendingUp, Share2 } from "lucide-react"
 import { Link } from "react-router-dom" // Import Link from "react-router-dom"
+import axios from "axios"
+import { socket } from "../socket"
 
-type Post = {
+interface Post {
   id: string
-  author: string
+  author: {
+    username: string
+  }
   content: string
   imageUrl?: string
-  sentiment: {
-    positive: number
-    negative: number
-    neutral: number
-  }
+  tags: string[]
+  label: string
+  score: number
   likes: number
   dislikes: number
-  comments: number
+  comments: string
 }
 
 const initialPosts: Post[] = [
   {
     id: "1",
-    author: "Alice",
+    author: { username: "Alice" },
     content: "Just had an amazing day at the beach! 🏖️ #SummerVibes",
     imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS45XRGoOgqDujrdcAQAME0LjyIg0YnR8Jk-A&s",
-    sentiment: { positive: 0.8, negative: 0.1, neutral: 0.1 },
+    // sentiment: { positive: 0.8, negative: 0.1, neutral: 0.1 },
+    label: "positive",
+    score: 0.8,
+    tags: ["summer", "beach", "vibes"],
     likes: 42,
     dislikes: 2,
-    comments: 5,
+    comments: "this is a comment",
   },
   {
     id: "2",
-    author: "Bob",
+    author: { username: "Bob" },
     content: "Feeling down today. Could use some positive vibes. 😔",
-    sentiment: { positive: 0.2, negative: 0.6, neutral: 0.2 },
     likes: 15,
+    tags: ["positive", "vibes"],
     dislikes: 0,
-    comments: 8,
-  },
-  {
-    id: "3",
-    author: "Charlie",
-    content: "Just finished my first marathon! 🏃‍♂️ #Accomplished",
-    imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSLFAjdtgTjUI0K4WcYKr0ZTW4lbEInVANkOQ&s",
-    sentiment: { positive: 0.9, negative: 0.0, neutral: 0.1 },
-    likes: 87,
-    dislikes: 1,
-    comments: 23,
-  },
+    comments: "this is a comment",
+    label: "negative",
+    score: 0.6,
+  }
 ]
 
 export default function Feed() {
@@ -60,17 +57,40 @@ export default function Feed() {
     setPosts(posts.map((post) => (post.id === postId ? { ...post, dislikes: post.dislikes + 1 } : post)))
   }
 
+  const getPosts = async () => {
+    const res = await axios.get("http://localhost:7000/api/v1/posts")
+    setPosts(res.data.data)
+  }
+ 
+  useEffect(() => {
+    getPosts()
+  }, [])
+console.log(posts)
+
+  useEffect(() => {
+    const handleNewPost = (data: Post) => {
+      console.log(data)
+      setPosts((prevPosts) => [data, ...prevPosts]) // Prepend the new post to the existing posts
+    }
+
+    socket.on("newPost", handleNewPost)
+
+    // Cleanup the socket listener on component unmount
+    return () => {
+      socket.off("newPost", handleNewPost)
+    }
+  }, [])
   return (
     <div className="space-y-6">
-      {posts.map((post) => (
+   {posts.length > 0 && posts.map((post) => (
         <div
           key={post.id}
           className="bg-white rounded-lg shadow-md overflow-hidden transition duration-300 ease-in-out hover:shadow-lg"
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <Link to={`/profile/${post.author}`} className="font-semibold text-blue-600 hover:underline">
-                {post.author}
+              <Link to={`/profile/${post.author.username}`} className="font-semibold text-blue-600 hover:underline">
+                {post.author.username}
               </Link>
               <div className="flex items-center space-x-2 text-gray-500">
                 <TrendingUp size={16} />
@@ -106,7 +126,7 @@ export default function Feed() {
                   className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition duration-200"
                 >
                   <MessageCircle size={20} />
-                  <span>{post.comments}</span>
+                  {/* <span>{post.comments}</span> */}
                 </Link>
                 <button className="flex items-center space-x-1 text-gray-500 hover:text-purple-600 transition duration-200">
                   <Share2 size={20} />
@@ -114,11 +134,11 @@ export default function Feed() {
                 </button>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-green-600">
-                  {(post.sentiment.positive * 100).toFixed(0)}%
+                <span className="text-sm capitalize font-medium text-green-600">
+                  {(post.label)}
                 </span>
-                <span className="text-sm font-medium text-red-600">{(post.sentiment.negative * 100).toFixed(0)}%</span>
-                <span className="text-sm font-medium text-gray-600">{(post.sentiment.neutral * 100).toFixed(0)}%</span>
+                {/* <span className="text-sm font-medium text-red-600">{(post.sentiment.negative * 100).toFixed(0)}%</span> */}
+                <span className="text-sm font-medium text-gray-600">{(post.score * 100).toFixed(0)}%</span>
               </div>
             </div>
           </div>
