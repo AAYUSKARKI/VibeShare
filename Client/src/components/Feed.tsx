@@ -5,7 +5,7 @@ import axios from "axios"
 import { socket } from "../socket"
 
 interface Post {
-  id: string
+  _id: string
   author: {
     username: string
   }
@@ -21,7 +21,7 @@ interface Post {
 
 const initialPosts: Post[] = [
   {
-    id: "1",
+    _id: "1",
     author: { username: "Alice" },
     content: "Just had an amazing day at the beach! 🏖️ #SummerVibes",
     imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS45XRGoOgqDujrdcAQAME0LjyIg0YnR8Jk-A&s",
@@ -34,7 +34,7 @@ const initialPosts: Post[] = [
     comments: "this is a comment",
   },
   {
-    id: "2",
+    _id: "2",
     author: { username: "Bob" },
     content: "Feeling down today. Could use some positive vibes. 😔",
     likes: 15,
@@ -50,11 +50,11 @@ export default function Feed() {
   const [posts, setPosts] = useState(initialPosts)
 
   const handleLike = (postId: string) => {
-    setPosts(posts.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)))
+    setPosts(posts.map((post) => (post._id === postId ? { ...post, likes: post.likes + 1 } : post)))
   }
 
   const handleDislike = (postId: string) => {
-    setPosts(posts.map((post) => (post.id === postId ? { ...post, dislikes: post.dislikes + 1 } : post)))
+    setPosts(posts.map((post) => (post._id === postId ? { ...post, dislikes: post.dislikes + 1 } : post)))
   }
 
   const getPosts = async () => {
@@ -84,7 +84,7 @@ console.log(posts)
     <div className="space-y-6">
    {posts.length > 0 && posts.map((post) => (
         <div
-          key={post.id}
+          key={post._id}
           className="bg-white rounded-lg shadow-md overflow-hidden transition duration-300 ease-in-out hover:shadow-lg"
         >
           <div className="p-6">
@@ -108,21 +108,21 @@ console.log(posts)
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <button
-                  onClick={() => handleLike(post.id)}
+                  onClick={() => handleLike(post._id)}
                   className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition duration-200"
                 >
                   <ThumbsUp size={20} />
                   <span>{post.likes}</span>
                 </button>
                 <button
-                  onClick={() => handleDislike(post.id)}
+                  onClick={() => handleDislike(post._id)}
                   className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition duration-200"
                 >
                   <ThumbsDown size={20} />
                   <span>{post.dislikes}</span>
                 </button>
                 <Link
-                  to={`/post/${post.id}`}
+                  to={`/post/${post._id}`}
                   className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition duration-200"
                 >
                   <MessageCircle size={20} />

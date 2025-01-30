@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ImageIcon, Tag, X } from "lucide-react";
 import { useSelector } from "react-redux";
+import RewardPopup from "./Rewardpopup";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 
@@ -17,19 +18,39 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const { user } = useSelector((state: any) => state.user);
   const [result, setResult] = useState<SentimentResult | null>(null);
+  const [rewardAmount, setRewardAmount] = useState<number>(0);
+  const [showRewardPopup, setShowRewardPopup] = useState<boolean>(false);
+  const [postCreated, setPostCreated] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (postCreated && rewardAmount !== null) {
+      console.log("Opening popup with reward:", rewardAmount);
+      setShowRewardPopup(true);
+      setPostCreated(false);
+    }
+  }, [rewardAmount, postCreated]);
+
+  const changeState = async (reward: number) => {
+    setRewardAmount(reward);
+    setPostCreated(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPostCreated(false);
+
     const formData = new FormData();
     formData.append("content", content);
     formData.append("tags", JSON.stringify(tags));
-    if (image) {
-      formData.append("imageUrl", image);
-    }
+    if (image) formData.append("imageUrl", image);
 
     try {
-      const response = await axios.post<SentimentResult[]>('http://127.0.0.1:5000/classify', { text: content });
+      const response = await axios.post<SentimentResult[]>(
+        "http://127.0.0.1:5000/classify",
+        { text: content }
+      );
       setResult(response.data[0]);
+
       if (response.data) {
         toast.success("Sentiment analysis successful!");
         formData.append("label", response.data[0].label);
@@ -37,17 +58,18 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
       } else {
         toast.error("Sentiment analysis failed. Please try again.");
       }
+
       const res = await axios.post("http://localhost:7000/api/v1/posts/create", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${user.data.refreshtoken}`,
         },
       });
-      if (res.data) {
-        toast.success("Post created successfully!");
-      }
-      resetForm();
-      onClose();
+
+      const reward = res.data.data.rewards;
+      await changeState(reward);
+
+      toast.success("Post created successfully!");
     } catch (error) {
       toast.error("Failed to create post. Please try again.");
     }
@@ -59,7 +81,21 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
     setImage(null);
     setImagePreview(null);
     setCurrentTag("");
+    setPostCreated(false);
   };
+
+  if (showRewardPopup && rewardAmount !== null) {
+    return (
+      <RewardPopup
+        onClose={() => {
+          setShowRewardPopup(false);
+          resetForm();
+          onClose();
+        }}
+        rewardAmount={rewardAmount}
+      />
+    );
+  }
 
   const handleAddTag = () => {
     const trimmedTag = currentTag.trim();
@@ -81,6 +117,11 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // **Ensure the RewardPopup opens when reward is set**
+  if (showRewardPopup && rewardAmount !== null) {
+    return <RewardPopup onClose={() => setShowRewardPopup(false)} rewardAmount={rewardAmount} />;
+  }
+
   return (
     <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-lg">
@@ -96,11 +137,7 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
           />
           {imagePreview && (
             <div className="mb-4">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full h-40 object-cover rounded-lg"
-              />
+              <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
             </div>
           )}
           <div className="flex items-center space-x-4 mb-4">
@@ -160,10 +197,7 @@ export default function CreatePost({ onClose }: { onClose: () => void }) {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300"
-            >
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
               Post
             </button>
           </div>

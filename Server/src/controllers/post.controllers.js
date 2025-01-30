@@ -4,6 +4,7 @@ import Post from "../models/post.model.js"; // Import the Post model
 import { uploadOnCloudinary } from "../utils/cloudinary.js"; // Assuming you have a utility for uploading images
 import { Apiresponse } from "../utils/apiresponse.js";
 import { io } from "../index.js";
+import { User } from "../models/user.model.js";
 // Create a new post
 const createPost = asynchandler(async (req, res) => {
     const { content,tags, label, score } = req.body;
@@ -45,6 +46,23 @@ if (tags) {
         // If no file is uploaded, ensure uploadedImageUrl is set to an empty string
         uploadedImageUrl = "";
     }
+
+    // Calculate rewards based on the score
+    let rewards = 0;
+    if (score > 0) {
+        rewards = score * 100; // Example: score of 1 gives 100 rewards
+    }
+
+    // Update user token balance in a single operation
+    const userUpdateResult = await User.findByIdAndUpdate(
+        req.user._id,
+        { $inc: { tokenBalance: rewards } }, // Increment tokenBalance by rewards
+        { new: true, runValidators: true } // Return the updated document and run validators
+    );
+
+    if (!userUpdateResult) {
+        throw new Apierror(404, "User  not found");
+    }
     // Create a new post
     const newPost = await Post.create({
         author: req.user._id, // Set author to the authenticated user's ID
@@ -52,7 +70,8 @@ if (tags) {
         imageUrl: uploadedImageUrl,
         tags: validatedTags,
         label,
-        score
+        score,
+        rewards
     });
 
     // Populate the author field
